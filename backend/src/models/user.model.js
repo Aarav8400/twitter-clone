@@ -7,17 +7,22 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      index:true
     },
     email: {
       type: String,
       required: true,
       unique: true,
     },
+    fullName:{
+      type:String,
+      required:true,
+    },
     password: {
       type: String,
       required: true,
     },
-    profilePic: {
+    avatar: {
       public_id: {
         type: String,
         required: true,
