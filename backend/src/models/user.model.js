@@ -41,6 +41,12 @@ const userSchema = new mongoose.Schema(
     refreshToken: {
       type: String,
     },
+     otp: {
+        type: String
+    },
+    otpExpire: {
+            type: Date
+    }
   },
   { timestamps: true }
 );
@@ -80,5 +86,12 @@ userSchema.methods.GenerateRefreshToken = function () {
     }
   );
 };
+
+userSchema.methods.generateOtp = function () { 
+    const otpgenrate = Math.floor(1000 + Math.random() * 9000);
+    const expireOtp = Date.now() + (20 * 1000 * 60)
+
+    return {otp: otpgenrate, otpExpire: expireOtp}
+}
 
 export const User = mongoose.model("User", userSchema);
