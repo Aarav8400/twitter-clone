@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+
 const userSchema = new mongoose.Schema(
   {
     username: {
@@ -92,6 +94,20 @@ userSchema.methods.generateOtp = function () {
     const expireOtp = Date.now() + (20 * 1000 * 60)
 
     return {otp: otpgenrate, otpExpire: expireOtp}
+}
+
+userSchema.methods.generateForgetPasswordToken = function(){
+
+    const forgetToken = crypto.randomBytes(20).toString('hex');
+
+    this.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(forgetToken)
+    .digest("hex");
+
+    this.resetPasswordExpire = Date.now() + 20 * 60 * 1000
+
+    return forgetToken;
 }
 
 export const User = mongoose.model("User", userSchema);
