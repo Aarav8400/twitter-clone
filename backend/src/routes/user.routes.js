@@ -7,7 +7,8 @@ import {
   verifyEmail,
   refreshAccessToken,
   forgetPassword,
-  passwordReset
+  passwordReset,
+  resendEmail
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 const router = Router();
@@ -23,6 +24,7 @@ router.route("/register").post(
 );
   
 router.route("/verify-email").post(verifyEmail)
+router.route('/resendEmail/:userId').post(resendEmail)
 router.route("/login").post(login)
 router.route("/logout").post(verifyJWT, logoutUser)
 router.route("/refersh-token").post(verifyJWT, refreshAccessToken)

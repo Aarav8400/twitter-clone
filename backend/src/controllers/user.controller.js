@@ -80,40 +80,34 @@ const registerUser = asyncHandler(async (req,res)=>{
 })
 
 const verifyEmail = asyncHandler(async (req, res) => {
-    const { email, otp } = req.body;
+    const {userId} = req.params
+    const {  otp } = req.body;
 
-    if (!email || !otp) {
-        throw new ApiError(400, "All fields are required");
+    if (!otp) {
+        throw new ApiError(400, "OTP filed is requried");
     }
 
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findById( userId )
         
         if (!user) {
-            throw new ApiError(400, "Email does not exist");
+            throw new ApiError(400, "User does not exits!!!");
         }
     
         if (user.isVerified) {
             throw new ApiError(400, "User is already verified");
         }
     
-        const emailVerification = await User.findOne({ email, otp });
-        if (!emailVerification) {
-            if (!user.isVerified) {
-                await sendEmailVerification(req, user);
-                return res.status(400).json(new ApiResponse(400, "Invalid OTP, new OTP sent to your email"));
-            }
-            return res.status(400).json(new ApiResponse(400, "Invalid OTP"));
+        if (user.otp !== otp) {
+            return res.status(400).json(new ApiResponse(400, "Invalid OTP, new OTP sent to your email"));
         }
     
         // Check if OTP is expired
         const currentTime = Date.now();
-        const expirationTime = new Date(emailVerification.createdAt.getTime() + 15 * 60 * 1000);
+        const expirationTime = new Date(user.otpExpire.getTime() + 15 * 60 * 1000);
         
         if (currentTime > expirationTime) {
-            // OTP expired, send new OTP
-            await sendEmailVerification(req, user);
-            return res.status(400).json(new ApiResponse(400, "OTP expired, new OTP sent to your email"));
+            return res.status(400).json(new ApiResponse(400, "OTP expired "));
         }
  
         // OTP is valid and not expired, mark email as verified
@@ -131,6 +125,44 @@ const verifyEmail = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Unable to verify email, please try again later");
     }
 });
+
+const resendEmail = asyncHandler(async (req, res) => {
+    const { userId } = req.params
+
+    try {
+        const user = await User.findById(userId)
+
+        if (!user) {
+            throw new ApiError(404, "User not found");
+        }
+
+        const { otp, otpExpire } = user.generateOtp()
+        
+        user.otp = otp
+        user.otpExpire = otpExpire
+        await user.save({validateBeforeSave:false})
+
+        await sendEmailVerification({
+            email: user.email,
+            subject: "verifY email",
+            mailgenContent: verifyemail(user.name,otp)
+        })
+
+        
+        return res.status(201)
+        .json(
+            new ApiResponse(
+                200, 
+                null, 
+                "Send OTP successfully"
+            )
+        )
+    } catch (error) {
+        console.log("Error : ",error);
+        throw new ApiError(500,"Somthing went wrong while sending OTP")
+    }
+})
+
 
 const login=asyncHandler(async(req,res)=>{
     const{username,email,password}=req.body
@@ -333,5 +365,6 @@ export {
   logoutUser,
   refreshAccessToken,
   forgetPassword,
-  passwordReset
+  passwordReset,
+  resendEmail
 }
