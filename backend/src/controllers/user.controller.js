@@ -70,10 +70,11 @@ const registerUser = asyncHandler(async (req,res)=>{
         await sendEmailVerification({
             email: createdUser.email,
             subject: "verifY email",
-            mailgenContent: verifyemail(createdUser.name,otp)
+            mailgenContent: verifyemail(createdUser.fullName,otp)
         })
 
         return res.status(201).json(new ApiResponse(200,createdUser,"user successfully registered"))
+        
 
 })
 
@@ -141,6 +142,9 @@ const login=asyncHandler(async(req,res)=>{
     if(!user){                            // !true=false
         throw new ApiError(400,"this user does not exist")
     }
+    if(!user.isVerified){
+        throw new ApiError(400,"please verify your email first")
+    }
     const validPassword= await user.isPasswordCorrect(password)
     if(!validPassword){     
        throw new ApiError(400,"please provide correct credentials") 
@@ -171,6 +175,30 @@ const login=asyncHandler(async(req,res)=>{
           )
         );
 })
+
+const logoutUser = asyncHandler(async (req, res) => {
+    await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: {
+          refreshToken: undefined,
+        },
+      },
+      {
+        new: true,
+      }
+    );
+  
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+    return res
+      .status(200)
+      .clearCookie("accessToken", options)
+      .clearCookie("refreshToken", options)
+      .json(new ApiResponse(200, {}, "user logged out"));
+  });
  
 
-export {registerUser,login,verifyEmail}
+export {registerUser,login,verifyEmail,logoutUser}
