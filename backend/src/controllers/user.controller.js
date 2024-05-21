@@ -163,7 +163,6 @@ const resendEmail = asyncHandler(async (req, res) => {
     }
 })
 
-
 const login=asyncHandler(async(req,res)=>{
     const{username,email,password}=req.body
     if(!username && !email){     //if(true || false)  
@@ -188,14 +187,16 @@ const login=asyncHandler(async(req,res)=>{
       const loggedInUser = await User.findById(user._id).select(
         "-password -refreshToken"
       );
+  
+      console.log(accessToken)
       const options = {
         httpOnly: true,
         secure: true,
       };
       return res
         .status(200)
-        .cookie("access token", accessToken, options)
-        .cookie("refresh token", refreshToken, options)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
         .json(
           new ApiResponse(
             200,
@@ -356,6 +357,71 @@ const passwordReset = asyncHandler(async (req, res, next) => {
     );
 });
 
+
+const getUserProfile = asyncHandler(async(req,res) => {
+  const { username } = req.params;
+
+  const user = await User.aggregate([
+    {
+      $match: {
+          username: username?.toLowerCase()
+      }    
+    },
+    {
+      $lookup: {
+        from: 'followers',
+        localField: '_id',
+        foreignField: 'following',
+        as:"followers"
+      }
+    },
+    {
+      $lookup: {
+        from: 'followers',
+        localField: '_id',
+        foreignField: 'follower',
+        as:"followTo"
+      }
+    },
+    {
+      $addFields: {
+        followesCount: {
+          $size: "$followers"
+        },
+        followToCount: {
+          $size: "$followTo"
+        },
+        isFollow: {
+          $cond: {
+          if: { $in: [req.user?._id, "$followers.follower"] },
+          then: true,
+          else: false
+          }
+       }
+      
+      }
+    },
+    {
+      $project: {
+        username: 1,
+        fullName: 1,
+        avatar: 1,
+        followesCount: 1,
+        followToCount: 1,
+        isFollow: 1,
+        email: 1
+      }
+    }
+  ])
+
+  console.log("User aggregate:",user);
+
+  if (!user?.length) {
+    throw new ApiError(400,'User does not exists')
+  }
+
+  return res.status(200).json(new ApiResponse(200,user[0],"User Profile feacted successfully"))
+})
  
 
 export {
@@ -366,5 +432,6 @@ export {
   refreshAccessToken,
   forgetPassword,
   passwordReset,
-  resendEmail
+  resendEmail,
+  getUserProfile
 }
