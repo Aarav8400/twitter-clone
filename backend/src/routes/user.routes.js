@@ -9,7 +9,11 @@ import {
   forgetPassword,
   passwordReset,
   resendEmail,
-  getUserProfile
+  getUserProfile,
+  followUser,
+  unfollowUser,
+  getFollowers,
+  getFollowing
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 const router = Router();
@@ -40,5 +44,10 @@ router.route("/password/reset/:token").post(passwordReset)
 
 router.route("/c/:username").get(verifyJWT, getUserProfile)
 
+router.route('/follow/:id').post(verifyJWT,followUser);
+router.route('/unfollow/:id').post(verifyJWT,unfollowUser)
+
+router.route('/:id/followers').get(verifyJWT,getFollowers);
+router.route('/:id/following').get(verifyJWT, getFollowing);
 
 export default router

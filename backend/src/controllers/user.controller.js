@@ -24,6 +24,7 @@ const generateAccessAndRefreshToken = async (userId) => {
   
 
 const registerUser = asyncHandler(async (req,res)=>{
+       console.log("hey",req.body);
         const {username,email,password,fullName}=req.body
         if(
             [username,email,password,fullName].some((fields)=>fields?.trim()==="")
@@ -423,6 +424,67 @@ const getUserProfile = asyncHandler(async(req,res) => {
   return res.status(200).json(new ApiResponse(200,user[0],"User Profile feacted successfully"))
 })
  
+const followUser = asyncHandler (async (req, res) => {
+      const userId = req.user.id;
+      const userToFollowId = req.params.id;
+      const userToFollow=await User.findById(userToFollowId)
+      if (!userToFollow) {
+        return res.status(404).json({ message: 'User to follow not found' });
+    }
+    if(userId==userToFollowId){
+      throw new ApiError(400,"you should not follow yourself")
+    }
+      await User.findByIdAndUpdate(userId, {
+          $addToSet: { following: userToFollowId }
+      });
+
+      await User.findByIdAndUpdate(userToFollowId, {
+          $addToSet: { followers: userId }
+      });
+
+      res.status(200).json({ message: 'User followed successfully' });
+   
+});
+
+const unfollowUser = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const userToUnfollowId = req.params.id;
+  const userToFollow=await User.findById(userToUnfollowId)
+  if (!userToFollow) {
+    return res.status(404).json({ message: 'User to unfollow not found' });
+}
+  await User.findByIdAndUpdate(userId, {
+      $pull: { following: userToUnfollowId }
+  });
+
+  await User.findByIdAndUpdate(userToUnfollowId, {
+      $pull: { followers: userId }
+  });
+
+  res.status(200).json({ message: 'User unfollowed successfully' });
+});
+
+const getFollowers = async (req, res) => {
+  try {
+      const followers = await User.findById(req.params.id)
+          .populate('followers', 'username') // Populate the followers field with username
+          .select('followers'); // Select only the followers field
+      res.status(200).json(followers);
+  } catch (err) {
+      res.status(500).json({ message: err.message });
+  }
+};
+
+const getFollowing = async (req, res) => {
+  try {
+      const following = await User.findById(req.params.id)
+          .populate('following', 'username') // Populate the following field with username
+          .select('following'); // Select only the following field
+      res.status(200).json(following);
+  } catch (err) {
+      res.status(500).json({ message: err.message });
+  }
+};
 
 export {
   registerUser,
@@ -433,5 +495,9 @@ export {
   forgetPassword,
   passwordReset,
   resendEmail,
-  getUserProfile
+  getUserProfile,
+  followUser,
+  unfollowUser,
+  getFollowers,
+  getFollowing
 }
